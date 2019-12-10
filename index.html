@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>My Graph</title>
+    <link rel="shortcut icon" href="bitbug_favicon.ico" />
+  </head>
+
+  <body>
+    <div id="graph" style="width: 100vw; height: calc(100vh - 36px);"></div>
+  </body>
+  <script src="echarts.js"></script>
+  <script type="module">
+    // import { UnilateralConnectedDigraph, GraphNode } from './characterGraph.js'
+    import { RelationGraph, GraphNode } from './relationGraph.js'
+
+    let relation = {
+      姜承: {
+        师父: ['欧阳英'],
+        妻子: ['欧阳倩'],
+        儿子: ['姜云凡']
+      },
+      欧阳英: {
+        // 四大世家: ['皇甫一鸣', '上官信', '夏侯彰'],
+        徒弟: ['姜承'],
+        女儿: ['欧阳倩', '欧阳慧'],
+        属于: ['四大世家']
+      },
+      欧阳倩: {
+        丈夫: ['姜承'],
+        父亲: ['欧阳英']
+      },
+      姜云凡: {
+        父亲: ['姜承'],
+        养父: ['殷其雷'],
+        母亲: ['欧阳倩'],
+        师父: ['李逍遥'],
+        恋人: ['唐雨柔']
+      },
+      殷其雷: {
+        养子: ['姜云凡']
+      },
+      唐雨柔: {
+        恋人: ['姜云凡'],
+        父亲: ['唐风'],
+        师父: ['草谷'],
+        被觊觎: ['上官雅']
+      },
+      皇甫一鸣: {
+        // 四大世家: ['欧阳英', '上官信', '夏侯彰'],
+        儿子: ['皇甫卓'],
+        属于: ['四大世家']
+      },
+      上官信: {
+        // 四大世家: ['欧阳英', '皇甫一鸣', '夏侯彰'],
+        儿子: ['上官雅'],
+        属于: ['四大世家']
+      },
+      上官雅: {
+        觊觎: ['唐雨柔'],
+        父亲: ['上官信']
+      },
+      夏侯彰: {
+        // 四大世家: ['欧阳英', '上官信', '皇甫一鸣']
+        属于: ['四大世家'],
+        弟: ['夏侯韬']  
+      },
+      四大世家: {
+        首领: ['欧阳英', '夏侯彰', '上官信', '皇甫一鸣']
+      },
+      李逍遥: {
+        妻子: ['林月如', '赵灵儿'],
+        父亲: ['李三思'],
+        被扶养: ['李大娘']
+      }
+    }
+
+    let imageMap = {
+      姜承: 'image://image/姜承.jpg',
+      欧阳倩: 'image://image/欧阳倩.jpg',
+      欧阳英: 'image://image/欧阳英.jpg',
+      姜云凡: 'image://image/姜云凡.jpg',
+      殷其雷: 'image://image/殷其雷.jpg',
+      李逍遥: 'image://image/李逍遥.jpg',
+      唐雨柔: 'image://image/唐雨柔.jpg',
+    }
+    ;(function(...names) {
+      for (let name of names) imageMap[name] = `image://image/${name}.jpg`
+    })('唐风', '草谷', '皇甫一鸣', '皇甫卓', '欧阳慧', '夏侯彰', '夏侯韬', '林月如', '赵灵儿', '李大娘')
+
+    let displayState = {}
+    // 获取前驱名
+    function getRelationed(name) {
+      let successors = []
+      for (let key in relation[name]) successors.push(...relation[name][key])
+      return successors
+    }
+    let nodeMap = new Map()
+    // 快速创建节点
+    function setGroup(...groups) {
+      for (let group of groups)
+        nodeMap.set(
+          group,
+          new GraphNode({
+            id: group,
+            data: {
+              name: group,
+              category: 2,
+              symbolSize: 50
+            }
+          })
+        )
+    }
+    setGroup('四大世家')
+    function setCharacters(sex, ...characters) {
+      for (let character of characters)
+        nodeMap.set(
+          character,
+          new GraphNode({
+            id: character,
+            data: {
+              name: character,
+              category: sex,
+              symbolSize: 50
+            }
+          })
+        )
+    }
+    setCharacters(0, '上官信', '上官雅', '李三思')
+    // setCharacters(1, '欧阳倩')
+    function setCharactersWithImage(sex, ...characters) {
+      for (let name of characters)
+        nodeMap.set(
+          name,
+          new GraphNode({
+            id: name,
+            data: {
+              symbol: imageMap[name],
+              name,
+              category: sex,
+              symbolSize: 100
+            }
+          })
+        )
+    }
+    setCharactersWithImage(
+      0,
+      '姜承',
+      '姜云凡',
+      '欧阳英',
+      '殷其雷',
+      '李逍遥',
+      '唐风',
+      '夏侯彰',
+      '皇甫一鸣',
+      '皇甫卓',
+    )
+    setCharactersWithImage(1, '欧阳倩', '唐雨柔', '草谷', '欧阳慧', '夏侯韬', '林月如', '赵灵儿', '李大娘')
+    console.log('nodeMap', nodeMap)
+    let relationGraph = new RelationGraph(nodeMap.get('姜云凡'))
+    console.log('nodeList', relationGraph.nodeList)
+    console.log('edgeList', relationGraph.edgeList)
+
+    let graph = echarts.init(document.getElementById('graph'))
+    let option = {
+      // 只设置必须的配置
+      title: {
+        text: 'Relationship Graph',
+        textStyle: {
+          color: '#ffffff'
+        },
+        left: 'center'
+      },
+      backgroundColor: '#1a4377',
+      tooltip: {},
+      // animationDurationUpdate: 1500,
+      // color: ['#83e0ff', '#45f5ce', '#b158ff'],
+      // 最外面的itemStyle没有高亮不高亮之分
+      series: [
+        {
+          type: 'graph',
+          layout: 'force',
+          force: {
+            repulsion: 1000,
+            edgeLength: 200
+          },
+          roam: true,
+          focusNodeAdjacency: true,
+          label: {
+            normal: {
+              show: true,
+              position: 'bottom',
+              fontWeight: 400,
+              fontSize: 15
+            }
+          },
+          draggable: true,
+          itemStyle: {
+            normal: {
+              borderColor: '#ffffff',
+              borderWidth: 6,
+              shadowBlur: 10,
+              shadowColor: 'Gainsboro',
+              color: 'springgreen'
+            }
+          },
+          edgeSymbol: ['none', 'arrow'],
+          edgeLabel: {
+            normal: {
+              show: true,
+              formatter: '{c}'
+            }
+          },
+          // draggable不要在外层使用，因为cursor会变成十字箭头
+          lineStyle: {
+            normal: {
+              opacity: 0.9,
+              width: 2,
+              curveness: 0.2,
+              color: 'Lavender'
+            }
+          },
+          categories: [
+            {
+              name: '男',
+
+              itemStyle: {
+                color: 'skyblue'
+              }
+            },
+            {
+              name: '女',
+              itemStyle: {
+                color: 'Violet'
+              }
+            },
+            {
+              name: '群体',
+              itemStyle: {
+                color: 'Gray'
+              }
+            }
+          ]
+        }
+      ]
+    }
+    option.series[0].nodes = relationGraph.nodeList
+    option.series[0].edges = relationGraph.edgeList
+    graph.setOption(option)
+    let fields = ['name', 'category', 'symbolSize']
+
+    graph.on('click', { dataType: 'node' }, function(params) {
+      let name = params.name
+      displayState[name] = !displayState[name]
+      console.log('displayState', displayState)
+      // 偶数次点击
+      if (!displayState[name]) {
+        relationGraph.deleteRelations(name)
+        option.series[0].nodes = relationGraph.nodeList
+        let tempState = {}
+        relationGraph.nodeList.forEach(
+          node => (tempState[node.name] = displayState[node.name])
+        )
+        displayState = tempState
+        option.series[0].edges = relationGraph.edgeList.map(edge => {
+          return {
+            source: edge.source,
+            target: edge.target,
+            value: edge.data.label
+          }
+        })
+        console.log('nodes', relationGraph._nodes)
+        console.log('edges', relationGraph._edges)
+        graph.setOption(option)
+        return
+      }
+      // 奇数次点击
+      let theRelation = relation[name]
+      console.log('theRelation', theRelation)
+      let relationedNodes = []
+      for (let key in theRelation) {
+        for (let value of theRelation[key])
+          relationedNodes.push(nodeMap.get(value))
+        console.log('relationedNodes', relationedNodes)
+        relationGraph.addRelationedNodes(
+          name,
+          { label: key },
+          ...relationedNodes
+        )
+        relationedNodes = []
+      }
+      option.series[0].nodes = relationGraph.nodeList
+      option.series[0].edges = relationGraph.edgeList.map(edge => {
+        return {
+          source: edge.source,
+          target: edge.target,
+          value: edge.data.label
+        }
+      })
+      console.log('nodes', relationGraph._nodes)
+      console.log('edges', relationGraph._edges)
+      graph.setOption(option)
+    })
+  </script>
+</html>
